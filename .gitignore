@@ -1,0 +1,23 @@
+# Eclipse IDE files
+.project
+.classpath
+.settings/
+bin/
+tmp/
+
+# Maven target directory
+target/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE specific
+.idea/
+*.iml
+
+# Build output
+out/

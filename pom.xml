@@ -15,17 +15,92 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.bag</groupId>
-      <artifactId>Conveer</artifactId>
-      <version>0.1.30-AlPHA</version>
-    </dependency>
-  </dependencies>
+  <build>
+    <plugins>
+      <!-- Плагин для извлечения классов из Spring Boot JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <id>unpack-conveer-classes</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.bag</groupId>
+                  <artifactId>Conveer</artifactId>
+                  <version>0.1.30-AlPHA</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>${project.build.directory}/conveer-classes</outputDirectory>
+                  <includes>BOOT-INF/classes/**</includes>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+          
+          <!-- Копирование зависимостей Conveer в target/lib -->
+          <execution>
+            <id>copy-dependencies</id>
+            <phase>package</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
-    <build>
-      <plugins>
-        <plugin>
+      <!-- Плагин для добавления извлеченных классов в classpath компиляции -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.4.0</version>
+        <executions>
+          <execution>
+            <id>add-conveer-classes</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/conveer-classes/BOOT-INF/classes</source>
+              </sources>
+            </configuration>
+          </execution>
+          
+          <!-- Добавление распакованных классов в ресурсы -->
+          <execution>
+            <id>add-resource</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>add-resource</goal>
+            </goals>
+            <configuration>
+              <resources>
+                <resource>
+                  <directory>${project.build.directory}/conveer-classes/BOOT-INF/classes</directory>
+                  <includes>
+                    <include>**/*.class</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Обновленная конфигурация компилятора -->
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
@@ -33,23 +108,80 @@
           <source>21</source>
           <target>21</target>
           <encoding>UTF-8</encoding>
-          <showWarnings>true</showWarnings>
-          <showDeprecation>true</showDeprecation>
+          <compilerArgs>
+            <arg>-cp</arg>
+            <arg>${project.build.directory}/conveer-classes/BOOT-INF/classes</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.2.2</version>
-          <configuration>
-            <archive>
-              <manifest>
-                <addClasspath>true</addClasspath>
-                <mainClass>org.mrbag.TesterCurenceProvider.CLIApp</mainClass>
-              </manifest>
-            </archive>
-          </configuration>
-        </plugin>
-      </plugins>
-    </build>
+      
+      <!-- Плагин для создания JAR с зависимостями -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>org.mrbag.TesterCurenceProvider.CLIApp</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      
+      <!-- Альтернатива: плагин для создания fat JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>org.mrbag.TesterCurenceProvider.CLIApp</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.bag</groupId>
+      <artifactId>Conveer</artifactId>
+      <version>0.1.30-AlPHA</version>
+      <!-- Изменим scope на runtime, чтобы зависимости включились в package -->
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
 </project>

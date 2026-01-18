@@ -20,14 +20,14 @@ public class LoadCurenncesProvider {
 	
 	public LoadCurenncesProvider(String str) {
 		 utils = new LoaderProviderUtil(); 
-		 listAvable = utils.scanPackage(str);
+		 listAvable = LoaderProviderUtil.scanPackage(str);
 		 
 		 listLoadAvable = new ArrayList<>();
 		 
 		 listAvable.stream()
 				 .map(cl ->{
 					 try {
-						 return cl.getConstructor(null).newInstance(null);
+						 return cl.getConstructor().newInstance();
 					} catch (Exception e) {
 						return null;
 					}
